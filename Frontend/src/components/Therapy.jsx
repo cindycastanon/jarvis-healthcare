@@ -1,32 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize the Gemini API
+const GEMINI_API_KEY = "AIzaSyD0fejsw91tyOzRRzob1Zcu0KX0QCzVlPA";
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Fix linter error by using motion components explicitly
 const MotionDiv = motion.div;
 const MotionButton = motion.button;
-
-// Therapy responses based on input
-const therapyResponses = {
-  depression: [
-    "It's important to recognize that depression is a medical condition, not a sign of weakness.",
-    "Have you considered speaking with a mental health professional about how you're feeling?",
-    "Small daily activities like light exercise or connecting with a friend can help improve your mood.",
-    "Remember that recovery is not linear, and it's okay to have good days and bad days."
-  ],
-  anxiety: [
-    "Let's practice a breathing exercise together. Breathe in for 4 counts, hold for 7, and exhale for 8 counts.",
-    "Try to identify specific triggers for your anxiety and consider how to address them one at a time.",
-    "Grounding techniques can help during moments of anxiety. Can you name 5 things you see right now?",
-    "Have you tried mindfulness meditation? Even a few minutes daily can help reduce anxiety symptoms."
-  ],
-  stress: [
-    "It's important to set boundaries and prioritize self-care when managing stress.",
-    "Consider breaking down large tasks into smaller, manageable steps.",
-    "Regular physical activity, even just a short walk, can significantly reduce stress levels.",
-    "Adequate sleep plays a crucial role in stress management. Are you getting enough rest?"
-  ]
-};
 
 const Therapy = () => {
   const [therapyDialog, setTherapyDialog] = useState([
@@ -34,12 +17,13 @@ const Therapy = () => {
   ]);
   const [userInput, setUserInput] = useState('');
   const [speakResponses, setSpeakResponses] = useState(false); // Default to not speaking
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const { transcript, resetTranscript } = useSpeechRecognition();
   const speechSupported = SpeechRecognition.browserSupportsSpeechRecognition();
   
-  // Basic therapy response system
-  const handleTherapyInput = (text) => {
+  // Advanced therapy response system using Gemini API
+  const handleTherapyInput = async (text) => {
     // Add user message to dialog
     setTherapyDialog([
       ...therapyDialog, 
@@ -48,34 +32,57 @@ const Therapy = () => {
     
     // Reset input field
     setUserInput('');
+    setIsProcessing(true);
     
-    // Analyze input and respond
-    setTimeout(() => {
-      let response = "I understand. Could you tell me more about how you're feeling?";
+    try {
+      // Get chat history to provide context
+      const chatHistory = therapyDialog.map(msg => 
+        `${msg.speaker === 'assistant' ? 'Therapist' : 'User'}: ${msg.text}`
+      ).join('\n');
       
-      const lowerText = text.toLowerCase();
+      // Create the prompt for Gemini
+      const prompt = `
+You are an empathetic and helpful AI therapist speaking with a user about their mental health.
+Your responses should be compassionate, professional, and therapeutic.
+You should focus on providing emotional support, validation, and appropriate coping strategies.
+
+IMPORTANT GUIDELINES:
+- Keep responses concise (1-3 sentences)
+- Never claim to be a licensed therapist or medical professional
+- Do not attempt to diagnose conditions
+- Suggest professional help when appropriate
+- Focus on evidence-based approaches like CBT, mindfulness, and positive psychology
+- Be especially helpful for anxiety, depression, and stress
+- Maintain a warm, encouraging tone
+
+Previous conversation:
+${chatHistory}
+
+User: ${text}
+
+Therapist:`;
+
+      // Call the Gemini API
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+      const result = await model.generateContent(prompt);
+      const response = result.response.text().trim();
       
-      // Check for specific conditions
-      if (lowerText.includes('depress') || lowerText.includes('sad') || lowerText.includes('hopeless')) {
-        const randomResponse = therapyResponses.depression[Math.floor(Math.random() * therapyResponses.depression.length)];
-        response = randomResponse;
-      } 
-      else if (lowerText.includes('anxious') || lowerText.includes('anxiety') || lowerText.includes('worry') || lowerText.includes('panic')) {
-        const randomResponse = therapyResponses.anxiety[Math.floor(Math.random() * therapyResponses.anxiety.length)];
-        response = randomResponse;
-      }
-      else if (lowerText.includes('stress') || lowerText.includes('overwhelm') || lowerText.includes('too much')) {
-        const randomResponse = therapyResponses.stress[Math.floor(Math.random() * therapyResponses.stress.length)];
-        response = randomResponse;
-      }
-      
-      // Add assistant response
+      // Add AI response to dialog
       setTherapyDialog(current => [
         ...current, 
         { speaker: 'assistant', text: response }
       ]);
       
-    }, 1000); // Delay to simulate thinking
+    } catch (error) {
+      console.error("Gemini API error:", error);
+      // Fallback response in case of API error
+      setTherapyDialog(current => [
+        ...current, 
+        { speaker: 'assistant', text: "I'm sorry, I'm having trouble processing right now. Could you try again or rephrase what you're feeling?" }
+      ]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   // Handle voice input for therapy
@@ -110,7 +117,7 @@ const Therapy = () => {
   
   return (
     <div className="space-y-4 h-full flex flex-col">
-      <h2 className="text-xl font-semibold text-gray-800">Voice Therapy Assistant</h2>
+      <h2 className="text-xl font-semibold text-gray-800">AI Therapy Assistant</h2>
       <p className="text-sm text-gray-600">Talk to our AI therapist about depression, anxiety, stress, or any mental health concerns.</p>
       
       <div className="flex-1 bg-white rounded-lg shadow overflow-hidden flex flex-col">
@@ -130,6 +137,20 @@ const Therapy = () => {
               {message.text}
             </MotionDiv>
           ))}
+          
+          {isProcessing && (
+            <MotionDiv 
+              className="ml-2 mr-auto bg-gray-200 text-gray-800 p-3 rounded-lg max-w-[80%] flex items-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0s" }}></div>
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+              </div>
+            </MotionDiv>
+          )}
         </div>
         
         <div className="p-3 border-t border-gray-200">
@@ -138,27 +159,32 @@ const Therapy = () => {
               type="text"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && handleTherapyInput(userInput)}
+              onKeyPress={(e) => e.key === 'Enter' && userInput.trim() && !isProcessing && handleTherapyInput(userInput)}
               placeholder="Type how you're feeling..."
               className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isProcessing}
             />
             <MotionButton
-              onClick={() => userInput.trim() && handleTherapyInput(userInput)}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              onClick={() => userInput.trim() && !isProcessing && handleTherapyInput(userInput)}
+              className={`bg-blue-500 text-white px-4 py-2 rounded-lg ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              whileHover={{ scale: isProcessing ? 1 : 1.05 }}
+              whileTap={{ scale: isProcessing ? 1 : 0.95 }}
+              disabled={isProcessing}
             >
               Send
             </MotionButton>
             {speechSupported && (
               <MotionButton
                 onClick={() => {
-                  SpeechRecognition.startListening({ continuous: false });
-                  setTimeout(handleVoiceTherapyInput, 3000);
+                  if (!isProcessing) {
+                    SpeechRecognition.startListening({ continuous: false });
+                    setTimeout(handleVoiceTherapyInput, 3000);
+                  }
                 }}
-                className="bg-indigo-500 text-white px-4 py-2 rounded-lg flex items-center"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className={`bg-indigo-500 text-white px-4 py-2 rounded-lg flex items-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                whileHover={{ scale: isProcessing ? 1 : 1.05 }}
+                whileTap={{ scale: isProcessing ? 1 : 0.95 }}
+                disabled={isProcessing}
               >
                 🎤
               </MotionButton>
@@ -166,7 +192,7 @@ const Therapy = () => {
           </div>
           <div className="flex justify-between items-center mt-2">
             <p className="text-xs text-gray-500">
-              Try saying how you feel or ask about depression, anxiety, or stress
+              Talk about how you're feeling or ask for help with anxiety, depression, or stress
             </p>
             <label className="flex items-center space-x-2 text-xs">
               <input 

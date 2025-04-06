@@ -7,6 +7,7 @@ import Medication from './Medication';
 import Therapy from './Therapy';
 import Overview from './Overview';
 import Vitals from './Vitals';
+import SkinCancer from './SkinCancer';
 
 // Fix linter error by using motion components explicitly
 const MotionDiv = motion.div;
@@ -17,7 +18,8 @@ const dashboardSections = [
   { id: 'overview', title: 'Health Overview', icon: '❤️' },
   { id: 'vitals', title: 'Vital Metrics', icon: '📊' },
   { id: 'therapy', title: 'Voice Therapy', icon: '🗣️' },
-  { id: 'medication', title: 'Medication', icon: '💊' }
+  { id: 'medication', title: 'Medication', icon: '💊' },
+  { id: 'skincancer', title: 'Skin Cancer', icon: '🔬' }
 ];
 
 export const Dashboard = () => {
@@ -55,6 +57,9 @@ export const Dashboard = () => {
         resetTranscript();
       } else if (text.includes('talk') || text.includes('therapist') || text.includes('feeling')) {
         setActiveSection('therapy');
+        resetTranscript();
+      } else if (text.includes('skin') || text.includes('mole') || text.includes('lesion') || text.includes('cancer scan')) {
+        setActiveSection('skincancer');
         resetTranscript();
       }
     }
@@ -152,6 +157,7 @@ export const Dashboard = () => {
             {activeSection === 'vitals' && <Vitals />}
             {activeSection === 'therapy' && <Therapy />}
             {activeSection === 'medication' && <Medication prescriptions={prescriptions} setPrescriptions={setPrescriptions} />}
+            {activeSection === 'skincancer' && <SkinCancer />}
           </MotionDiv>
         </div>
       </MotionDiv>

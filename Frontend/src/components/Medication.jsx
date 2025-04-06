@@ -238,7 +238,7 @@ const Medication = ({ prescriptions, setPrescriptions }) => {
     if (!pillDetectionResults) return;
     
     const newPrescription = {
-      id: prescriptions.length + 1,
+      id: Date.now(), // Use timestamp as unique ID
       name: pillDetectionResults.pillName,
       dosage: pillDetectionResults.dosage,
       schedule: pillDetectionResults.schedule,
@@ -249,7 +249,7 @@ const Medication = ({ prescriptions, setPrescriptions }) => {
       precautions: pillDetectionResults.precautions
     };
     
-    setPrescriptions([...prescriptions, newPrescription]);
+    setPrescriptions(prevPrescriptions => [...prevPrescriptions, newPrescription]);
     
     // Clear the detection results after adding
     setPillDetectionResults(null);
@@ -258,7 +258,7 @@ const Medication = ({ prescriptions, setPrescriptions }) => {
 
   // Add these functions for medication management
   const handleDeleteMedication = (id) => {
-    setPrescriptions(prescriptions.filter(med => med.id !== id));
+    setPrescriptions(prevPrescriptions => prevPrescriptions.filter(med => med.id !== id));
   };
   
   const handleEditMedication = (id) => {
