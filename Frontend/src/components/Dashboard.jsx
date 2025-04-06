@@ -8,6 +8,8 @@ import Therapy from './Therapy';
 import Overview from './Overview';
 import Vitals from './Vitals';
 import SkinCancer from './SkinCancer';
+import DoctorMap from './DoctorMap';
+import Wellness from './Wellness';
 
 // Fix linter error by using motion components explicitly
 const MotionDiv = motion.div;
@@ -16,27 +18,36 @@ const MotionH1 = motion.h1;
 
 const dashboardSections = [
   { id: 'overview', title: 'Health Overview', icon: '❤️' },
+  { id: 'wellness', title: 'Wellness Tracking', icon: '🧠' },
   { id: 'vitals', title: 'Vital Metrics', icon: '📊' },
   { id: 'therapy', title: 'Voice Therapy', icon: '🗣️' },
   { id: 'medication', title: 'Medication', icon: '💊' },
-  { id: 'skincancer', title: 'Skin Cancer', icon: '🔬' }
+  { id: 'skincancer', title: 'Skin Cancer', icon: '🔬' },
+  { id: 'doctors', title: 'Nearby Doctors', icon: '👨‍⚕️' }
+];
+
+// Default prescriptions if none are stored
+const defaultPrescriptions = [
+  { id: 1, name: 'Sertraline', dosage: '50mg', schedule: 'Once daily, morning', type: 'Antidepressant' },
+  { id: 2, name: 'Lorazepam', dosage: '0.5mg', schedule: 'As needed', type: 'Anti-anxiety' },
+  { id: 3, name: 'Melatonin', dosage: '3mg', schedule: 'Once daily, bedtime', type: 'Sleep aid' }
 ];
 
 export const Dashboard = () => {
   const [activeSection, setActiveSection] = useState('overview');
   const [isListening, setIsListening] = useState(false);
-  const [prescriptions, setPrescriptions] = useState([
-    { id: 1, name: 'Sertraline', dosage: '50mg', schedule: 'Once daily, morning', type: 'Antidepressant' },
-    { id: 2, name: 'Lorazepam', dosage: '0.5mg', schedule: 'As needed', type: 'Anti-anxiety' },
-    { id: 3, name: 'Melatonin', dosage: '3mg', schedule: 'Once daily, bedtime', type: 'Sleep aid' }
-  ]);
+  const [prescriptions, setPrescriptions] = useState(() => {
+    // Load prescriptions from localStorage on component mount
+    const savedPrescriptions = localStorage.getItem('prescriptions');
+    return savedPrescriptions ? JSON.parse(savedPrescriptions) : defaultPrescriptions;
+  });
   
   const { transcript, resetTranscript } = useSpeechRecognition();
   
-  // Handler for section change from voice component
-  const handleSectionChange = (sectionId) => {
-    setActiveSection(sectionId);
-  };
+  // Save prescriptions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('prescriptions', JSON.stringify(prescriptions));
+  }, [prescriptions]);
   
   // Handle voice commands for navigation
   useEffect(() => {
@@ -97,7 +108,7 @@ export const Dashboard = () => {
             
             <div className="flex space-x-3">
               {/* Add DashboardVoice component */}
-              <DashboardVoice onSectionChange={handleSectionChange} />
+              <DashboardVoice onSectionChange={setActiveSection} />
               
               <MotionButton
                 onClick={handleToggleListening}
@@ -154,10 +165,12 @@ export const Dashboard = () => {
             className="bg-gray-50 rounded-xl p-4 sm:p-6 flex-1 overflow-y-auto"
           >
             {activeSection === 'overview' && <Overview />}
+            {activeSection === 'wellness' && <Wellness />}
             {activeSection === 'vitals' && <Vitals />}
             {activeSection === 'therapy' && <Therapy />}
             {activeSection === 'medication' && <Medication prescriptions={prescriptions} setPrescriptions={setPrescriptions} />}
             {activeSection === 'skincancer' && <SkinCancer />}
+            {activeSection === 'doctors' && <DoctorMap />}
           </MotionDiv>
         </div>
       </MotionDiv>
