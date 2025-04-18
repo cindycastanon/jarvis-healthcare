@@ -1,5 +1,4 @@
 # Healthcare Dashboard with Voice Navigation
-# Link: https://github.com/abdukarim17/healthcare
 An interactive healthcare dashboard with AI-powered voice navigation for managing medications, therapy sessions, and health metrics.
 
 ## Features
